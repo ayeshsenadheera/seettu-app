@@ -7,6 +7,7 @@ import 'services/app_state.dart';
 import 'services/loader.dart' show appRouteObserver;
 import 'services/tab_state.dart';
 import 'theme.dart';
+import 'frontend/frontend_app.dart';
 
 import 'screens/auth_screens.dart';
 import 'screens/home_screen.dart';
@@ -19,6 +20,11 @@ import 'screens/trusted_people_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  const frontendOnly = bool.fromEnvironment('FRONTEND_ONLY', defaultValue: true);
+  if (frontendOnly) {
+    runApp(const FrontendApp());
+    return;
+  }
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const SeettuApp());
 }

@@ -1,5 +1,40 @@
 # Seettu App — Flutter + Node.js/Express + MongoDB + Firebase Authentication
 
+## Frontend first — Wijesundara's screens
+
+The app now starts in an offline Flutter frontend mode, with no Firebase setup,
+API server or MongoDB required. It implements the supplied Missed/Late Payments,
+Payment Details, Payouts, Payout Details, Profile, and Rules & Guidelines designs.
+The shared emerald cards use `#108548`, a 26px radius, 20px padding and the
+reference shadow. The layout scrolls on phones and centers on wider screens.
+
+Implemented interactions include status filtering, member payment details,
+selected payout details, rules tabs, reminder previews, account editing and
+session-only profile preferences. All records are sample data. Reminder actions
+do not send messages, and payout actions do not transfer money.
+
+From `mobile/`, with Flutter installed:
+
+```sh
+flutter create --platforms=android,web --project-name seettu .
+flutter pub get
+flutter analyze
+flutter test
+flutter run -d chrome
+```
+
+This repository contains source files only; `flutter create` generates the
+missing platform runners. Review any generated default test and remove or update
+it if it expects Flutter's counter sample. The actual frontend interaction tests
+are in `mobile/test/frontend_test.dart`.
+
+Frontend mode is the default entry point in `mobile/lib/main.dart`. When ready
+to use the existing connected app, follow the backend/Firebase setup below and
+run `flutter run --dart-define=FRONTEND_ONLY=false`.
+
+The frontend implementation has not been compiled in this workspace because
+Flutter and Dart are not installed. Run the analysis and tests above before a demo.
+
 ```
 Flutter (mobile)  ->  REST API / JSON  ->  Node.js + Express.js  ->  MongoDB
        |                                         |
