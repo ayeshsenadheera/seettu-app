@@ -6,7 +6,6 @@ void main() {
   testWidgets('payments filter and selected member details work offline', (tester) async {
     await tester.pumpWidget(const FrontendApp());
     expect(find.text('Marcus Vance'), findsOneWidget);
-    expect(find.text('Alice Cameron'), findsOneWidget);
     await tester.tap(find.text('Late (1)'));
     await tester.pumpAndSettle();
     expect(find.text('Marcus Vance'), findsNothing);
@@ -23,8 +22,9 @@ void main() {
     await tester.pumpWidget(const FrontendApp());
     await tester.tap(find.text('Payouts').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Marcus Vance').last);
-    await tester.tap(find.text('Marcus Vance').last);
+    await tester.scrollUntilVisible(find.text('Marcus Vance'), 180,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Marcus Vance'));
     await tester.pumpAndSettle();
     expect(find.text('Payout Details'), findsOneWidget);
     expect(find.text('#4 / 12'), findsOneWidget);

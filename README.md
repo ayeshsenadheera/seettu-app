@@ -32,8 +32,23 @@ Frontend mode is the default entry point in `mobile/lib/main.dart`. When ready
 to use the existing connected app, follow the backend/Firebase setup below and
 run `flutter run --dart-define=FRONTEND_ONLY=false`.
 
-The frontend implementation has not been compiled in this workspace because
-Flutter and Dart are not installed. Run the analysis and tests above before a demo.
+The frontend has now been checked with Flutter 3.47.6: all three interaction
+tests pass, and analysis of the frontend and its tests reports no issues.
+Full-project analysis still reports lint findings in the older connected screens.
+
+On this computer, Flutter initially selected an unusable `pwsh.exe` Windows app
+alias and reported "Access is denied / Unable to determine engine version".
+The project `.vscode/settings.json` excludes that alias directory from the
+Flutter extension's PATH. Reload the VS Code window to apply the setting.
+From `mobile/`, use the local command wrapper if your terminal has the same issue:
+
+```powershell
+..\flutter-local.cmd doctor -v
+..\flutter-local.cmd run -d chrome --web-port=5300
+```
+
+The wrapper and VS Code SDK configuration point to this machine's SDK at
+`C:\Users\ASUS\flutter`; adjust them when working on another computer.
 
 ```
 Flutter (mobile)  ->  REST API / JSON  ->  Node.js + Express.js  ->  MongoDB
