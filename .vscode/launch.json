@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Seettu — six screens on Android",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/mobile",
+      "program": "${workspaceFolder}/mobile/lib/main.dart",
+      "deviceId": "emulator-5554",
+      "toolArgs": ["--dart-define=FRONTEND_ONLY=true"]
+    }
+  ]
+}

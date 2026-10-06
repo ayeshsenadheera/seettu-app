@@ -4,6 +4,10 @@ import 'package:seettu/frontend/frontend_app.dart';
 
 void main() {
   testWidgets('payments filter and selected member details work offline', (tester) async {
+    tester.view.physicalSize = const Size(393, 742);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const FrontendApp());
     expect(find.text('Marcus Vance'), findsOneWidget);
     await tester.tap(find.text('Late (1)'));
@@ -19,6 +23,10 @@ void main() {
   });
 
   testWidgets('payout schedule opens the selected slot and rules', (tester) async {
+    tester.view.physicalSize = const Size(393, 742);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const FrontendApp());
     await tester.tap(find.text('Payouts').last);
     await tester.pumpAndSettle();
@@ -47,6 +55,29 @@ void main() {
     await tester.tap(find.text('Preview reminders'));
     await tester.pumpAndSettle();
     expect(find.text('Reminder previews created for 3 members.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('profile edits and navigation stay within the six-screen frontend', (tester) async {
+    tester.view.physicalSize = const Size(393, 742);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const FrontendApp());
+    await tester.tap(find.text('Profile').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Edit account'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Yeshani Wijesundara');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Yeshani Wijesundara'), findsOneWidget);
+    await tester.tap(find.text('Rules').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Rules & Guidelines'), findsOneWidget);
+    await tester.tap(find.text('Payments').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Missed / Late payments'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

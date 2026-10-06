@@ -7,7 +7,8 @@ plugins {
 android {
     namespace = "com.example.seettu"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Reuse the installed NDK; the frontend does not require NDK 28 features.
+    ndkVersion = "27.1.12297006"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
