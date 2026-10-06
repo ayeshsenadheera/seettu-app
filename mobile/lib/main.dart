@@ -8,6 +8,7 @@ import 'services/loader.dart' show appRouteObserver;
 import 'services/tab_state.dart';
 import 'theme.dart';
 import 'frontend/frontend_app.dart';
+import 'frontend/connected_frontend.dart';
 
 import 'screens/auth_screens.dart';
 import 'screens/home_screen.dart';
@@ -21,7 +22,8 @@ import 'screens/trusted_people_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const frontendOnly = bool.fromEnvironment('FRONTEND_ONLY', defaultValue: true);
-  if (frontendOnly) {
+  const backendEnabled = bool.fromEnvironment('BACKEND_ENABLED');
+  if (frontendOnly && !backendEnabled) {
     runApp(const FrontendApp());
     return;
   }
@@ -77,7 +79,9 @@ class _Root extends StatelessWidget {
         ),
       );
     }
-    return app.user == null ? const AuthFlow() : const _Tabs();
+    if (app.user == null) return const AuthFlow();
+    const backendEnabled = bool.fromEnvironment('BACKEND_ENABLED');
+    return backendEnabled ? const ConnectedFrontendShell() : const _Tabs();
   }
 }
 
@@ -112,7 +116,7 @@ class _Tabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = context.watch<TabState>().index;
-    final pages = const [HomeScreen(), GroupsScreen(), PaymentDashboardScreen(), MembersScreen(), ProfileScreen()];
+    const pages = [HomeScreen(), GroupsScreen(), PaymentDashboardScreen(), MembersScreen(), ProfileScreen()];
     return Scaffold(
       body: SafeArea(child: IndexedStack(index: index, children: pages)),
       bottomNavigationBar: BottomNavigationBar(

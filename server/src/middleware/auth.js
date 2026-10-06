@@ -2,13 +2,14 @@ const admin = require('../utils/firebase');
 const User = require('../models/User');
 const { HttpError, wrap } = require('../utils/http');
 
-module.exports = wrap(async (req, res, next) => {
+function createAuth({ verifyToken = (token) => admin.auth().verifyIdToken(token, !process.env.FIREBASE_AUTH_EMULATOR_HOST) } = {}) {
+return wrap(async (req, res, next) => {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (!token) throw new HttpError(401, 'Please log in.');
 
   let decoded;
-  try { decoded = await admin.auth().verifyIdToken(token); }
+  try { decoded = await verifyToken(token); }
   catch (e) { throw new HttpError(401, 'Session expired. Please log in again.'); }
 
   const user = await User.findOne({ firebaseUid: decoded.uid });
@@ -17,3 +18,7 @@ module.exports = wrap(async (req, res, next) => {
   req.firebaseUser = decoded;
   next();
 });
+}
+
+module.exports = createAuth();
+module.exports.createAuth = createAuth;

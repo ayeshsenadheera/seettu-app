@@ -1,5 +1,9 @@
 # Seettu App — Flutter + Node.js/Express + MongoDB + Firebase Authentication
 
+Backend support and an optional live-data mode are now implemented for
+Wijesundara’s six screens. Start here: [Backend and Firebase setup](BACKEND_SETUP.md).
+The offline preview remains the default until Firebase is configured.
+
 ## Frontend first — Wijesundara's screens
 
 The app now starts in an offline Flutter frontend mode, with no Firebase setup,
