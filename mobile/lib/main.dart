@@ -19,7 +19,12 @@ import 'screens/trusted_people_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // TEMP: Firebase disabled for frontend-only development
+  // await Firebase.initializeApp(
+  //   options: DefaultFirebaseOptions.currentPlatform,
+  // );
+
   runApp(const SeettuApp());
 }
 
@@ -27,22 +32,19 @@ class SeettuApp extends StatelessWidget {
   const SeettuApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AppState()),
-        ChangeNotifierProvider(create: (_) => TabState()),
-      ],
-      child: MaterialApp(
-        title: 'seettū',
-        debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(),
-        navigatorObservers: [appRouteObserver],
-        home: const _Root(),
-        onGenerateRoute: _onGenerateRoute,
-      ),
-    );
-  }
+Widget build(BuildContext context) {
+  return MaterialApp(
+    title: 'seettū',
+    debugShowCheckedModeBanner: false,
+    theme: buildAppTheme(),
+    navigatorObservers: [appRouteObserver],
+
+    // TEMP: Payment frontend development without Firebase
+    home: const PaymentDashboardScreen(),
+
+    onGenerateRoute: _onGenerateRoute,
+  );
+}
 }
 
 class _Root extends StatelessWidget {
