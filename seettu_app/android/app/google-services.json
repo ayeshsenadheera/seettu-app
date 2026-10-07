@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "701858165494",
+    "project_id": "seettu-70852",
+    "storage_bucket": "seettu-70852.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701858165494:android:d3f2b6cdaad4f41cf7b2d7",
+        "android_client_info": {
+          "package_name": "com.example.seettu_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEFNq5-k4cyQD5157AZdyBsWdydRJAkaM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
