@@ -1,5 +1,59 @@
 # Seettu App — Flutter + Node.js/Express + MongoDB + Firebase Authentication
 
+Backend support and an optional live-data mode are now implemented for
+Wijesundara’s six screens. Start here: [Backend and Firebase setup](BACKEND_SETUP.md).
+The offline preview remains the default until Firebase is configured.
+
+## Frontend first — Wijesundara's screens
+
+The app now starts in an offline Flutter frontend mode, with no Firebase setup,
+API server or MongoDB required. It implements the supplied Missed/Late Payments,
+Payment Details, Payouts, Payout Details, Profile, and Rules & Guidelines designs.
+The shared emerald cards use `#108548`, a 26px radius, 20px padding and the
+reference shadow. The layout scrolls on phones and centers on wider screens.
+
+Implemented interactions include status filtering, member payment details,
+selected payout details, rules tabs, reminder previews, account editing and
+session-only profile preferences. All records are sample data. Reminder actions
+do not send messages, and payout actions do not transfer money.
+
+From `mobile/`, with Flutter installed:
+
+```sh
+flutter create --platforms=android,web --project-name seettu .
+flutter pub get
+flutter analyze
+flutter test
+flutter run -d chrome
+```
+
+This repository contains source files only; `flutter create` generates the
+missing platform runners. Review any generated default test and remove or update
+it if it expects Flutter's counter sample. The actual frontend interaction tests
+are in `mobile/test/frontend_test.dart`.
+
+Frontend mode is the default entry point in `mobile/lib/main.dart`. When ready
+to use the existing connected app, follow the backend/Firebase setup below and
+run `flutter run --dart-define=FRONTEND_ONLY=false`.
+
+The frontend has now been checked with Flutter 3.47.6: all three interaction
+tests pass, and analysis of the frontend and its tests reports no issues.
+Full-project analysis still reports lint findings in the older connected screens.
+
+On this computer, Flutter initially selected an unusable `pwsh.exe` Windows app
+alias and reported "Access is denied / Unable to determine engine version".
+The project `.vscode/settings.json` excludes that alias directory from the
+Flutter extension's PATH. Reload the VS Code window to apply the setting.
+From `mobile/`, use the local command wrapper if your terminal has the same issue:
+
+```powershell
+..\flutter-local.cmd doctor -v
+..\flutter-local.cmd run -d chrome --web-port=5300
+```
+
+The wrapper and VS Code SDK configuration point to this machine's SDK at
+`C:\Users\ASUS\flutter`; adjust them when working on another computer.
+
 ```
 Flutter (mobile)  ->  REST API / JSON  ->  Node.js + Express.js  ->  MongoDB
        |                                         |
