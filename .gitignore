@@ -1,3 +1,9 @@
 node_modules/
 .expo/
+.android-build-cache/
+.env
+server/serviceAccountKey.json
+server/.local-mongo/
+server/.mongo-binaries/
+server/.test-tmp/
 node_modules/ npm-debug.log* .env server/serviceAccountKey.json **/build/ **/.dart_tool/ **/.flutter-plugins **/.flutter-plugins-dependencies **/.packages **/android/.gradle/ **/ios/Pods/ **/ios/.symlinks/ .DS_Store Thumbs.db

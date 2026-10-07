@@ -7,6 +7,7 @@ const userSchema = new Schema({
   phone: { type: String, required: true },
   role: { type: String, enum: ['Organizer', 'Participant'], default: 'Organizer' },
   settings: {
+    sharePayoutUpdates: { type: Boolean, default: false },
     language: { type: String, enum: ['English', 'Sinhala', 'Tamil'], default: 'English' },
     textSize: { type: String, enum: ['Small', 'Medium', 'Large', 'Extra Large'], default: 'Medium' },
     reminder: {

@@ -6,4 +6,6 @@ module.exports = model('Notification', new Schema({
   memberId: { type: Schema.Types.ObjectId, required: true },
   memberName: String,
   message: String,
+  cycle: String,
+  deliveryStatus: { type: String, enum: ['Recorded', 'Sent', 'Failed'], default: 'Recorded' },
 }, { timestamps: true }));
