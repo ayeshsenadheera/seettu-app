@@ -1,14 +1,6 @@
-@('node_modules/',
-'npm-debug.log*',
-'.env',
-'server/serviceAccountKey.json',
-'**/build/',
-'**/.dart_tool/',
-'**/.flutter-plugins',
-'**/.flutter-plugins-dependencies',
-'**/.packages',
-'**/android/.gradle/',
-'**/ios/Pods/',
-'**/ios/.symlinks/',
-'.DS_Store',
-'Thumbs.db') | Set-Content .gitignore
+node_modules/
+.env
+serviceAccountKey.json
+npm-debug.log*
+**/build/
+**/.dart_tool/

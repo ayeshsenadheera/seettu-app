@@ -1,7 +1,7 @@
-import 'package:firebase_core/firebase_core.dart';
+﻿import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'app_shell.dart';
 import 'firebase_options.dart';
 import 'services/app_state.dart';
 import 'services/loader.dart' show appRouteObserver;
@@ -21,7 +21,7 @@ import 'screens/trusted_people_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  const frontendOnly = bool.fromEnvironment('FRONTEND_ONLY', defaultValue: true);
+  const frontendOnly = bool.fromEnvironment('FRONTEND_ONLY', defaultValue: false);
   const backendEnabled = bool.fromEnvironment('BACKEND_ENABLED');
   if (frontendOnly && !backendEnabled) {
     runApp(const FrontendApp());
@@ -42,12 +42,12 @@ class SeettuApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TabState()),
       ],
       child: MaterialApp(
-        title: 'seettū',
+        title: 'seettÅ«',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         navigatorObservers: [appRouteObserver],
         home: const _Root(),
-        onGenerateRoute: _onGenerateRoute,
+        onGenerateRoute: (s) => herRoutes(s) ?? _onGenerateRoute(s),
       ),
     );
   }
@@ -80,14 +80,13 @@ class _Root extends StatelessWidget {
       );
     }
     if (app.user == null) return const AuthFlow();
-    const backendEnabled = bool.fromEnvironment('BACKEND_ENABLED');
-    return backendEnabled ? const ConnectedFrontendShell() : const _Tabs();
+        return const MainShell();
   }
 }
 
 /// Onboarding, Login and Sign Up live on their own nested Navigator. When sign-in
 /// succeeds, AppState.user changes, _Root rebuilds, and this whole subtree (and its
-/// stack) is torn down in favour of _Tabs — no manual "go to home" navigation needed.
+/// stack) is torn down in favour of _Tabs â€” no manual "go to home" navigation needed.
 class AuthFlow extends StatelessWidget {
   const AuthFlow({super.key});
   @override
@@ -196,3 +195,6 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   }
   return MaterialPageRoute(builder: (_) => page, settings: settings);
 }
+
+
+
