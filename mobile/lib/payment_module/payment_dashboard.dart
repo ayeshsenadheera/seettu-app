@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'record_payment.dart';
+import 'payment_history.dart';
 
 class PaymentDashboard extends StatelessWidget {
   const PaymentDashboard({super.key});
@@ -39,15 +40,15 @@ class PaymentDashboard extends StatelessWidget {
               color: green,
               borderRadius: BorderRadius.circular(17),
             ),
-            child: Row(
+            child: const Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.groups,
                   color: Colors.white,
                   size: 34,
                 ),
-                const SizedBox(width: 15),
-                const Expanded(
+                SizedBox(width: 15),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -74,7 +75,7 @@ class PaymentDashboard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.chevron_right,
                   color: Colors.white,
                 ),
@@ -145,10 +146,10 @@ class PaymentDashboard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.push(
-                       context,
-                     MaterialPageRoute(
-                         builder: (_) => const RecordPaymentScreen(),
-                       ),
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RecordPaymentScreen(),
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -173,7 +174,14 @@ class PaymentDashboard extends StatelessWidget {
           _ActionTile(
             icon: Icons.access_time,
             title: 'My Payment History',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PaymentHistoryScreen(),
+                ),
+              );
+            },
           ),
           _ActionTile(
             icon: Icons.people_outline,
@@ -336,35 +344,33 @@ class _ActionTile extends StatelessWidget {
     required this.onTap,
   });
 
-  
-@override
-Widget build(BuildContext context) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Material(
-      color: PaymentDashboard.background,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(
-          icon,
-          color: PaymentDashboard.textColor,
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: PaymentDashboard.background,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          onTap: onTap,
+          leading: Icon(
+            icon,
             color: PaymentDashboard.textColor,
           ),
-        ),
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: Color(0xFF94A3B8),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              color: PaymentDashboard.textColor,
+            ),
+          ),
+          trailing: const Icon(
+            Icons.chevron_right,
+            color: Color(0xFF94A3B8),
+          ),
         ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 }
