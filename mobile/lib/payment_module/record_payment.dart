@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -7,8 +6,7 @@ class RecordPaymentScreen extends StatefulWidget {
   const RecordPaymentScreen({super.key});
 
   @override
-  State<RecordPaymentScreen> createState() =>
-      _RecordPaymentScreenState();
+  State<RecordPaymentScreen> createState() => _RecordPaymentScreenState();
 }
 
 class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
@@ -48,8 +46,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
     super.dispose();
   }
 
-  String get formattedDate =>
-      DateFormat('dd MMM yyyy').format(paymentDate);
+  String get formattedDate => DateFormat('dd MMM yyyy').format(paymentDate);
 
   String formatMonth(String month) {
     final date = DateTime.parse('$month-01');
@@ -259,7 +256,6 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
                         value == null ? 'Please select a member' : null,
                   ),
                   const SizedBox(height: 25),
-
                   fieldLabel('Contribution Amount'),
                   TextFormField(
                     controller: amountController,
@@ -280,7 +276,6 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
                     },
                   ),
                   const SizedBox(height: 25),
-
                   fieldLabel('Payment Month'),
                   DropdownButtonFormField<String>(
                     initialValue: selectedMonth,
@@ -300,7 +295,6 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
                     },
                   ),
                   const SizedBox(height: 25),
-
                   fieldLabel('Payment Date'),
                   InkWell(
                     onTap: chooseDate,
@@ -318,7 +312,6 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
                     ),
                   ),
                   const SizedBox(height: 25),
-
                   fieldLabel('Reference / Note (Optional)'),
                   TextFormField(
                     controller: noteController,
