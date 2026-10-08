@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'record_payment.dart';
 
 class PaymentDashboard extends StatelessWidget {
   const PaymentDashboard({super.key});
@@ -142,7 +143,14 @@ class PaymentDashboard extends StatelessWidget {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                       context,
+                     MaterialPageRoute(
+                         builder: (_) => const RecordPaymentScreen(),
+                       ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD5DEE8),
                       foregroundColor: textColor,
