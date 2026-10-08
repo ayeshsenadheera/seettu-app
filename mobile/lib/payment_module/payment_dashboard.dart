@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'record_payment.dart';
 import 'payment_history.dart';
+import 'shared_payment_records.dart';
 
 class PaymentDashboard extends StatelessWidget {
   const PaymentDashboard({super.key});
@@ -184,9 +185,16 @@ class PaymentDashboard extends StatelessWidget {
             },
           ),
           _ActionTile(
-            icon: Icons.people_outline,
+            icon: Icons.groups_outlined,
             title: 'Shared Payment Records',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SharedPaymentRecordsScreen(),
+                ),
+              );
+            },
           ),
           _ActionTile(
             icon: Icons.notifications_none,
