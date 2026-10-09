@@ -1,27 +1,39 @@
 const router = require('express').Router();
 const Group = require('../models/Group');
 const Payment = require('../models/Payment');
+const Notification = require('../models/Notification');
+const User = require('../models/User');
+const Trusted = require('../models/Trusted');
 const auth = require('../middleware/auth');
 const { HttpError, wrap } = require('../utils/http');
 const { normalizePhone } = require('../utils/phone');
 const { monthKey, nextDue, payoutDate, startOfDay } = require('../utils/cycles');
+const { isOwner, roleOf, canManage, accessibleGroups, linkToExistingUser, loadGroup } = require('../utils/access');
 
 router.use(auth);
 
-const serMember = (m) => ({ id: String(m._id), name: m.name, phone: m.phone, email: m.email, status: m.status, position: m.position });
-const serGroup = (g, payments = []) => {
+// Phone / e-mail are shown only to the organizer and to the member themselves.
+// role: Organizer | Member.  hasAccount: false = not signed up yet (so they cannot see the group).
+const serMember = (m, { showContact = true, ownerUid = null } = {}) => ({
+  id: String(m._id), name: m.name, phone: showContact ? m.phone : '', email: showContact ? m.email : '',
+  status: m.status, position: m.position,
+  role: ownerUid && m.firebaseUid === ownerUid ? 'Organizer' : 'Member',
+  hasAccount: !!m.firebaseUid,
+});
+const serGroup = (g, payments = [], user = null, organizerName = null) => {
   const key = monthKey(new Date());
+  const role = user ? roleOf(g, user) : null;
   return {
     id: String(g._id), name: g.name, contribution: g.contribution, frequency: g.frequency, memberLimit: g.memberLimit,
     startDate: g.startDate, description: g.description, memberCount: g.members.length,
     paidThisMonth: payments.filter((p) => p.month === key).length, nextCollection: nextDue(g),
+    role, canManage: role === 'Organizer', organizerName,
   };
 };
-async function getGroup(req) {
-  const g = await Group.findOne({ _id: req.params.id, owner: req.user._id });
-  if (!g) throw new HttpError(404, 'Group not found.');
-  return g;
-}
+// Any group I can open (organizer or member). manage=true -> organizer only.
+const getGroup = (req, manage = false) => loadGroup(req.user, req.params.id, { manage });
+const ownerOf = async (g) => User.findById(g.owner);
+const nameOf = async (g) => ((await ownerOf(g)) || {}).name || null;
 function readGroup(b, current) {
   const name = String(b.name || '').trim();
   const contribution = Number(b.contribution);
@@ -37,35 +49,51 @@ function readGroup(b, current) {
 }
 
 router.get('/', wrap(async (req, res) => {
-  const groups = await Group.find({ owner: req.user._id }).sort({ createdAt: 1 });
+  const groups = await accessibleGroups(req.user);
   const payments = await Payment.find({ group: { $in: groups.map((g) => g._id) } });
-  res.json({ groups: groups.map((g) => serGroup(g, payments.filter((p) => String(p.group) === String(g._id)))) });
+  const owners = await User.find({ _id: { $in: groups.map((g) => g.owner) } });
+  const nameById = Object.fromEntries(owners.map((u) => [String(u._id), u.name]));
+  res.json({ groups: groups.map((g) => serGroup(g, payments.filter((p) => String(p.group) === String(g._id)), req.user, nameById[String(g.owner)] || null)) });
+}));
+
+// "What am I in this app?"  organizer of / member of / trusted person for
+router.get('/roles/summary', wrap(async (req, res) => {
+  const groups = await accessibleGroups(req.user);
+  const trusted = await Trusted.find({ guest: req.user._id, status: 'Active' });
+  const owners = await User.find({ _id: { $in: trusted.map((t) => t.owner) } });
+  const nameById = Object.fromEntries(owners.map((u) => [String(u._id), u.name]));
+  const pick = (r) => groups.filter((g) => roleOf(g, req.user) === r).map((g) => ({ id: String(g._id), name: g.name }));
+  res.json({
+    organizerOf: pick('Organizer'), memberOf: pick('Member'),
+    trustedFor: trusted.filter((t) => !t.expiresAt || t.expiresAt > new Date()).map((t) => ({ id: String(t._id), ownerName: nameById[String(t.owner)] || null })),
+  });
 }));
 
 router.post('/', wrap(async (req, res) => {
   const data = readGroup(req.body);
   const g = await Group.create({
     ...data, owner: req.user._id,
-    members: [{ name: req.user.name, phone: req.user.phone, email: req.user.email, position: 1, joinedAt: data.startDate }],
+    members: [{ firebaseUid: req.user.firebaseUid, name: req.user.name, phone: req.user.phone, email: req.user.email, position: 1, joinedAt: data.startDate }],
   });
-  res.status(201).json({ group: serGroup(g) });
+  res.status(201).json({ group: serGroup(g, [], req.user, req.user.name) });
 }));
 
 router.get('/:id', wrap(async (req, res) => {
   const g = await getGroup(req);
-  res.json({ group: serGroup(g, await Payment.find({ group: g._id })) });
+  res.json({ group: serGroup(g, await Payment.find({ group: g._id }), req.user, await nameOf(g)) });
 }));
 
 router.put('/:id', wrap(async (req, res) => {
-  const g = await getGroup(req);
+  const g = await getGroup(req, true);
   Object.assign(g, readGroup(req.body, g));
   await g.save();
-  res.json({ group: serGroup(g, await Payment.find({ group: g._id })) });
+  res.json({ group: serGroup(g, await Payment.find({ group: g._id }), req.user, req.user.name) });
 }));
 
 router.delete('/:id', wrap(async (req, res) => {
-  const g = await getGroup(req);
+  const g = await getGroup(req, true);
   await Payment.deleteMany({ group: g._id });
+  await Notification.deleteMany({ group: g._id });
   await g.deleteOne();
   res.json({ ok: true });
 }));
@@ -78,14 +106,24 @@ router.get('/:id/members', wrap(async (req, res) => {
   const list = sortedMembers(g);
   const today = startOfDay(new Date());
   const next = list.find((m) => payoutDate(g, m.position) >= today);
-  res.json({ group: serGroup(g), members: list.map((m) => ({ ...serMember(m), nextPayout: !!next && String(next._id) === String(m._id) })) });
+  const owner = await ownerOf(g);
+  const manage = canManage(g, req.user);
+  res.json({
+    group: serGroup(g, [], req.user, owner && owner.name),
+    members: list.map((m) => ({
+      ...serMember(m, { showContact: manage || m.firebaseUid === req.user.firebaseUid, ownerUid: owner && owner.firebaseUid }),
+      nextPayout: !!next && String(next._id) === String(m._id),
+    })),
+  });
 }));
 
 router.get('/:id/members/:mid', wrap(async (req, res) => {
   const g = await getGroup(req);
   const m = g.members.id(req.params.mid);
   if (!m) throw new HttpError(404, 'Member not found.');
-  res.json({ member: { ...serMember(m), payoutDate: payoutDate(g, m.position) } });
+  const owner = await ownerOf(g);
+  const showContact = canManage(g, req.user) || m.firebaseUid === req.user.firebaseUid;
+  res.json({ member: { ...serMember(m, { showContact, ownerUid: owner && owner.firebaseUid }), payoutDate: payoutDate(g, m.position) } });
 }));
 
 function readMember(b, g, selfId) {
@@ -96,32 +134,40 @@ function readMember(b, g, selfId) {
   if (!phone) throw new HttpError(400, 'Enter a valid phone number, like 0771234567.');
   if (email && !/^\S+@\S+\.\S+$/.test(email)) throw new HttpError(400, 'Enter a valid email address.');
   if (g.members.some((m) => m.phone === phone && String(m._id) !== String(selfId))) throw new HttpError(409, 'A member with this phone number is already in the group.');
+  if (email && g.members.some((m) => m.email && m.email.toLowerCase() === email.toLowerCase() && String(m._id) !== String(selfId))) throw new HttpError(409, 'A member with this email is already in the group.');
   return { name, phone, email };
 }
 
 router.post('/:id/members', wrap(async (req, res) => {
-  const g = await getGroup(req);
+  const g = await getGroup(req, true);
   if (g.members.length >= g.memberLimit) throw new HttpError(400, `This group is full (${g.memberLimit} members).`);
   g.members.push({ ...readMember(req.body, g), position: g.members.length + 1 });
+  const added = g.members[g.members.length - 1];
+  // If this person already has an account (same phone or e-mail) they see the group right away;
+  // otherwise it is linked automatically the first time they sign up / log in.
+  await linkToExistingUser(added);
   await g.save();
-  res.status(201).json({ member: serMember(g.members[g.members.length - 1]) });
+  res.status(201).json({ member: serMember(added), linked: !!added.firebaseUid });
 }));
 
 router.put('/:id/members/:mid', wrap(async (req, res) => {
-  const g = await getGroup(req);
+  const g = await getGroup(req, true);
   const m = g.members.id(req.params.mid);
   if (!m) throw new HttpError(404, 'Member not found.');
+  const before = { phone: m.phone, email: m.email };
   Object.assign(m, readMember(req.body, g, m._id));
   if (['Active', 'Inactive'].includes(req.body.status)) m.status = req.body.status;
+  // Contact details changed -> re-check which account (if any) this person is
+  if ((before.phone !== m.phone || before.email !== m.email) && m.firebaseUid !== req.user.firebaseUid) await linkToExistingUser(m);
   await g.save();
   res.json({ member: serMember(m) });
 }));
 
 router.delete('/:id/members/:mid', wrap(async (req, res) => {
-  const g = await getGroup(req);
+  const g = await getGroup(req, true);
   const m = g.members.id(req.params.mid);
   if (!m) throw new HttpError(404, 'Member not found.');
-  if (m.phone === req.user.phone) throw new HttpError(400, "You can't remove yourself from your own group.");
+  if (m.firebaseUid === req.user.firebaseUid || m.phone === req.user.phone) throw new HttpError(400, "You can't remove yourself from your own group.");
   m.deleteOne();
   sortedMembers(g).forEach((x, i) => { x.position = i + 1; });
   await g.save();
@@ -142,7 +188,7 @@ router.get('/:id/payouts', wrap(async (req, res) => {
     else if (!currentSet) { status = 'Current'; currentSet = true; }
     return { memberId: String(m._id), name: m.name, position: m.position, date, amount: pot, status };
   });
-  res.json({ group: serGroup(g), potAmount: pot, payouts });
+  res.json({ group: serGroup(g, [], req.user), potAmount: pot, payouts });
 }));
 
 module.exports = router;

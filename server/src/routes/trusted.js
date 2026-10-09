@@ -8,6 +8,7 @@ const auth = require('../middleware/auth');
 const { HttpError, wrap } = require('../utils/http');
 const { normalizePhone } = require('../utils/phone');
 const { monthKey, statusFor, payoutDate, myMember } = require('../utils/cycles');
+const { accessibleGroups } = require('../utils/access');
 
 router.use(auth);
 const active = (t) => !t.expiresAt || t.expiresAt > new Date();
@@ -64,7 +65,7 @@ router.get('/shared', wrap(async (req, res) => {
   for (const t of list) {
     const owner = await User.findById(t.owner);
     if (!owner) continue;
-    const groups = await Group.find({ owner: owner._id }).sort({ createdAt: 1 });
+    const groups = await accessibleGroups(owner);
     let g = null, me = null;
     for (const x of groups) { const m = myMember(x, owner); if (m) { g = x; me = m; break; } }
     const data = { groupName: g ? g.name : null };

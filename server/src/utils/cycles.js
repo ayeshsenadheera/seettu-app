@@ -25,9 +25,9 @@ function monthsUpTo(group, today = new Date()) {
 // Paid | Pending | Late (within 7 days grace) | Missed | N/A (member had not joined yet)
 function statusFor(group, payments, member, key, today = new Date()) {
   const from = monthKey(new Date(Math.max(new Date(member.joinedAt || group.startDate), new Date(group.startDate))));
-  if (key < from) return 'N/A';
   const paid = payments.find((p) => String(p.memberId) === String(member._id) && p.month === key);
-  if (paid && paid.amount >= group.contribution) return 'Paid';
+  if (paid && paid.amount >= group.contribution) return 'Paid'; // a recorded payment always counts
+  if (key < from) return 'N/A';
   const t = startOfDay(today).getTime();
   const due = dueDate(group, key).getTime();
   if (t <= due) return 'Pending';
@@ -75,7 +75,9 @@ function payoutDate(group, position) {
   return d;
 }
 
-// The member entry that belongs to the logged-in user (matched by phone), else null
-const myMember = (group, user) => group.members.find((m) => m.phone && m.phone === user.phone) || null;
+// The member entry that belongs to the logged-in user: linked account first, phone as a fallback
+const myMember = (group, user) =>
+  group.members.find((m) => m.firebaseUid && m.firebaseUid === user.firebaseUid) ||
+  group.members.find((m) => m.phone && m.phone === user.phone) || null;
 
 module.exports = { DAY, GRACE_DAYS, startOfDay, monthKey, nextKey, dueDate, monthsUpTo, statusFor, outstandingFor, nextDue, payoutDate, myMember };
