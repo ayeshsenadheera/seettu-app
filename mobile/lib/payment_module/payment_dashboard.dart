@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'record_payment.dart';
 import 'payment_history.dart';
 import 'shared_payment_records.dart';
+import 'payment_reminder.dart';
 
 class PaymentDashboard extends StatelessWidget {
   const PaymentDashboard({super.key});
@@ -199,7 +200,14 @@ class PaymentDashboard extends StatelessWidget {
           _ActionTile(
             icon: Icons.notifications_none,
             title: 'Payment Reminder',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PaymentReminderScreen(),
+                ),
+              );
+            },
           ),
           _ActionTile(
             icon: Icons.event_note,
