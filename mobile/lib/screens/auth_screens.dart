@@ -10,17 +10,7 @@ class Logo extends StatelessWidget {
   final double size;
   const Logo({super.key, this.size = 96});
   @override
-  Widget build(BuildContext context) => Column(children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(size / 3)),
-          alignment: Alignment.center,
-          child: Icon(Icons.groups, size: size * 0.5, color: Colors.white),
-        ),
-        const SizedBox(height: 10),
-        AppText('seettū', size: 28, weight: FontWeight.w800, color: AppColors.primaryDark),
-      ]);
+  Widget build(BuildContext context) => Image.asset('assets/images/logo.png', width: size * 1.6, height: size * 1.6, fit: BoxFit.contain);
 }
 
 // Turns a raw FirebaseAuthException into the kind of plain-language message the rest of the app uses.
