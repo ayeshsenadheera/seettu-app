@@ -1,3 +1,6 @@
 node_modules/
-.expo/
-node_modules/ npm-debug.log* .env server/serviceAccountKey.json **/build/ **/.dart_tool/ **/.flutter-plugins **/.flutter-plugins-dependencies **/.packages **/android/.gradle/ **/ios/Pods/ **/ios/.symlinks/ .DS_Store Thumbs.db
+.env
+serviceAccountKey.json
+npm-debug.log*
+**/build/
+**/.dart_tool/

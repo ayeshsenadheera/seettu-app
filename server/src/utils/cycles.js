@@ -14,7 +14,10 @@ function dueDate(group, key) {
 function monthsUpTo(group, today = new Date()) {
   const out = [];
   let key = monthKey(group.startDate);
-  const end = monthKey(today);
+  const start = new Date(group.startDate);
+  const last = monthKey(new Date(start.getFullYear(), start.getMonth() + Math.max(1, group.memberLimit || group.members.length) - 1, 1));
+  const end = [monthKey(today), last].sort()[0];
+  if (key > end) return out;
   for (;;) { out.push(key); if (key >= end) break; key = nextKey(key); }
   return out;
 }
@@ -22,13 +25,13 @@ function monthsUpTo(group, today = new Date()) {
 // Paid | Pending | Late (within 7 days grace) | Missed | N/A (member had not joined yet)
 function statusFor(group, payments, member, key, today = new Date()) {
   const from = monthKey(new Date(Math.max(new Date(member.joinedAt || group.startDate), new Date(group.startDate))));
-  if (key < from) return 'N/A';
   const paid = payments.find((p) => String(p.memberId) === String(member._id) && p.month === key);
-  if (paid) return 'Paid';
+  if (paid && paid.amount >= group.contribution) return 'Paid'; // a recorded payment always counts
+  if (key < from) return 'N/A';
   const t = startOfDay(today).getTime();
   const due = dueDate(group, key).getTime();
   if (t <= due) return 'Pending';
-  if (t <= due + GRACE_DAYS * DAY) return 'Late';
+  if (t <= due + (group.policy?.graceDays ?? GRACE_DAYS) * DAY) return 'Late';
   return 'Missed';
 }
 
@@ -43,7 +46,7 @@ function outstandingFor(group, payments, today = new Date()) {
         const due = dueDate(group, key);
         out.push({
           groupId: String(group._id), groupName: group.name, memberId: String(m._id), memberName: m.name,
-          month: key, dueDate: due, amount: group.contribution, status: st,
+          month: key, dueDate: due, amount: Math.max(0, group.contribution - (payments.find((p) => String(p.memberId) === String(m._id) && p.month === key)?.amount || 0)), status: st,
           daysOverdue: Math.floor((t - due) / DAY),
         });
       }
@@ -63,11 +66,18 @@ function payoutDate(group, position) {
   const s = new Date(group.startDate);
   const d = new Date(s);
   if (group.frequency === 'Weekly') d.setDate(s.getDate() + 7 * (position - 1));
-  else d.setMonth(s.getMonth() + position - 1);
+  else {
+    d.setDate(1);
+    d.setMonth(s.getMonth() + position - 1);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(s.getDate(), lastDay));
+  }
   return d;
 }
 
-// The member entry that belongs to the logged-in user (matched by phone), else null
-const myMember = (group, user) => group.members.find((m) => m.phone && m.phone === user.phone) || null;
+// The member entry that belongs to the logged-in user: linked account first, phone as a fallback
+const myMember = (group, user) =>
+  group.members.find((m) => m.firebaseUid && m.firebaseUid === user.firebaseUid) ||
+  group.members.find((m) => m.phone && m.phone === user.phone) || null;
 
 module.exports = { DAY, GRACE_DAYS, startOfDay, monthKey, nextKey, dueDate, monthsUpTo, statusFor, outstandingFor, nextDue, payoutDate, myMember };

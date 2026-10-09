@@ -1,0 +1,9 @@
+{
+  "dart.flutterSdkPath": "C:\\Users\\ASUS\\flutter",
+  "dart.env": {
+    "GRADLE_USER_HOME": "D:\\itpmpAF\\PAF\\SachiniGit\\seettu-app\\.android-build-cache\\gradle-home",
+    "TEMP": "D:\\itpmpAF\\PAF\\SachiniGit\\seettu-app\\.android-build-cache\\tmp",
+    "TMP": "D:\\itpmpAF\\PAF\\SachiniGit\\seettu-app\\.android-build-cache\\tmp",
+    "PATH": "C:/Users/ASUS/flutter/bin;C:/Users/ASUS/AppData/Local/Android/sdk/platform-tools;C:/Windows/System32/WindowsPowerShell/v1.0;C:/Windows/System32;C:/Windows;C:/Program Files/Git/cmd"
+  }
+}

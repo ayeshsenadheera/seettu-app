@@ -9,6 +9,8 @@ class Config {
   static const int apiPort = 5000;
 
   static String get apiUrl {
+    const configured = String.fromEnvironment('API_BASE_URL');
+    if (configured.isNotEmpty) return configured.replaceFirst(RegExp(r'/$'), '');
     if (apiHost != 'CHANGE_ME') return 'http://$apiHost:$apiPort/api';
     if (kIsWeb) return 'http://localhost:$apiPort/api';
     if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:$apiPort/api';
