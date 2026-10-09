@@ -5,15 +5,6 @@ allprojects {
     }
 }
 
-// Keep the app and native plugin libraries on the same installed NDK.
-subprojects {
-    afterEvaluate {
-        extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
-            ndkVersion = "27.1.12297006"
-        }
-    }
-}
-
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")
