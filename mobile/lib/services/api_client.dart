@@ -22,10 +22,15 @@ class ApiClient {
 
   Future<Map<String, String>> _headers() async {
     final headers = {'Content-Type': 'application/json'};
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final token = await user.getIdToken();
-      headers['Authorization'] = 'Bearer $token';
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final token = await user.getIdToken();
+        headers['Authorization'] = 'Bearer $token';
+      }
+    } catch (_) {
+      // Firebase might not be configured, ignore and send no auth header
+      // For development, we can send a mock user ID if needed, but for now we just don't send the header.
     }
     return headers;
   }

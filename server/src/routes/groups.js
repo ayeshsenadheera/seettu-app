@@ -16,7 +16,7 @@ router.use(auth);
 // role: Organizer | Member.  hasAccount: false = not signed up yet (so they cannot see the group).
 const serMember = (m, { showContact = true, ownerUid = null } = {}) => ({
   id: String(m._id), name: m.name, phone: showContact ? m.phone : '', email: showContact ? m.email : '',
-  status: m.status, position: m.position,
+  status: m.status, position: m.position, joined: m.joinedAt ? m.joinedAt.toISOString().split('T')[0] : 'N/A',
   role: ownerUid && m.firebaseUid === ownerUid ? 'Organizer' : 'Member',
   hasAccount: !!m.firebaseUid,
 });
@@ -135,13 +135,15 @@ function readMember(b, g, selfId) {
   if (email && !/^\S+@\S+\.\S+$/.test(email)) throw new HttpError(400, 'Enter a valid email address.');
   if (g.members.some((m) => m.phone === phone && String(m._id) !== String(selfId))) throw new HttpError(409, 'A member with this phone number is already in the group.');
   if (email && g.members.some((m) => m.email && m.email.toLowerCase() === email.toLowerCase() && String(m._id) !== String(selfId))) throw new HttpError(409, 'A member with this email is already in the group.');
-  return { name, phone, email };
+  const position = b.position ? parseInt(b.position, 10) : undefined;
+  const joinedAt = b.joinedAt ? new Date(b.joinedAt) : undefined;
+  return { name, phone, email, ...(position && { position }), ...(joinedAt && !isNaN(joinedAt) && { joinedAt }) };
 }
 
 router.post('/:id/members', wrap(async (req, res) => {
   const g = await getGroup(req, true);
   if (g.members.length >= g.memberLimit) throw new HttpError(400, `This group is full (${g.memberLimit} members).`);
-  g.members.push({ ...readMember(req.body, g), position: g.members.length + 1 });
+  g.members.push({ position: g.members.length + 1, ...readMember(req.body, g) });
   const added = g.members[g.members.length - 1];
   // If this person already has an account (same phone or e-mail) they see the group right away;
   // otherwise it is linked automatically the first time they sign up / log in.

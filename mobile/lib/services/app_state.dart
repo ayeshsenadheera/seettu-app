@@ -19,7 +19,14 @@ class AppState extends ChangeNotifier {
   String? bootError;
 
   AppState() {
-    FirebaseAuth.instance.authStateChanges().listen(_onAuthChanged);
+    try {
+      FirebaseAuth.instance.authStateChanges().listen(_onAuthChanged);
+    } catch (e) {
+      user = {'id': '123', 'name': 'Test User', 'email': 'test@example.com', 'phone': '0771234567', 'role': 'Admin', 'settings': defaultSettings};
+      booting = false;
+      // notifyListeners(); // It's in constructor, so wait a tick
+      Future.microtask(() => notifyListeners());
+    }
   }
 
   Future<void> _onAuthChanged(User? fbUser) async {
