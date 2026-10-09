@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // on the same Wi-Fi can reach it (find it with `ipconfig`). 10.0.2.2 is the special address the
 // Android emulator uses to reach "localhost" on your computer; iOS Simulator can use localhost.
 class Config {
-  static const String apiHost = 'CHANGE_ME'; // e.g. '192.168.1.10' — leave as-is to auto-pick for emulators
+  static const String apiHost = '192.168.1.25'; // e.g. '192.168.1.10' — leave as-is to auto-pick for emulators
   static const int apiPort = 5000;
 
   static String get apiUrl {

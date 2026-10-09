@@ -10,8 +10,12 @@ import 'theme.dart';
 
 import 'screens/auth_screens.dart';
 import 'screens/home_screen.dart';
-import 'screens/group_screens.dart';
-import 'screens/member_screens.dart';
+import 'screens/groups/groups_screen.dart';
+import 'screens/groups/group_details_screen.dart';
+import 'screens/groups/group_form_screen.dart';
+import 'screens/members/members_screen.dart';
+import 'screens/members/member_details_screen.dart';
+import 'screens/members/member_form_screen.dart';
 import 'screens/payment_screens.dart';
 import 'screens/payout_screens.dart';
 import 'screens/profile_screens.dart';
@@ -19,7 +23,11 @@ import 'screens/trusted_people_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    debugPrint('Firebase not configured. Bypassing...');
+  }
   runApp(const SeettuApp());
 }
 

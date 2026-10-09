@@ -8,7 +8,7 @@ const { monthKey, nextDue, payoutDate, startOfDay } = require('../utils/cycles')
 
 router.use(auth);
 
-const serMember = (m) => ({ id: String(m._id), name: m.name, phone: m.phone, email: m.email, status: m.status, position: m.position });
+const serMember = (m) => ({ id: String(m._id), name: m.name, phone: m.phone, email: m.email, status: m.status, position: m.position, joined: m.joinedAt ? m.joinedAt.toISOString().split('T')[0] : 'N/A' });
 const serGroup = (g, payments = []) => {
   const key = monthKey(new Date());
   return {
@@ -96,13 +96,15 @@ function readMember(b, g, selfId) {
   if (!phone) throw new HttpError(400, 'Enter a valid phone number, like 0771234567.');
   if (email && !/^\S+@\S+\.\S+$/.test(email)) throw new HttpError(400, 'Enter a valid email address.');
   if (g.members.some((m) => m.phone === phone && String(m._id) !== String(selfId))) throw new HttpError(409, 'A member with this phone number is already in the group.');
-  return { name, phone, email };
+  const position = b.position ? parseInt(b.position, 10) : undefined;
+  const joinedAt = b.joinedAt ? new Date(b.joinedAt) : undefined;
+  return { name, phone, email, ...(position && { position }), ...(joinedAt && !isNaN(joinedAt) && { joinedAt }) };
 }
 
 router.post('/:id/members', wrap(async (req, res) => {
   const g = await getGroup(req);
   if (g.members.length >= g.memberLimit) throw new HttpError(400, `This group is full (${g.memberLimit} members).`);
-  g.members.push({ ...readMember(req.body, g), position: g.members.length + 1 });
+  g.members.push({ position: g.members.length + 1, ...readMember(req.body, g) });
   await g.save();
   res.status(201).json({ member: serMember(g.members[g.members.length - 1]) });
 }));
