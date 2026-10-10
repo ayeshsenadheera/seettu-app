@@ -196,6 +196,58 @@ router.post('/', wrap(async (req, res) => {
 // GET /api/payments/history?groupId=...
 // ======================================================
 
+
+// ======================================================
+// PAYMENT BALANCE
+// GET /api/payments/balance?groupId=...&memberId=...&month=YYYY-MM
+// ======================================================
+
+router.get('/balance', wrap(async (req, res) => {
+  const { groupId, memberId, month } = req.query;
+
+  const g = await ownGroup(req.user, groupId);
+  const member = g.members.id(memberId);
+
+  if (!member) {
+    throw new HttpError(404, 'Member not found.');
+  }
+
+  // Members may only view their own balance.
+  if (!canManage(g, req.user)) {
+    const me = myMember(g, req.user);
+
+    if (!me || String(me._id) !== String(member._id)) {
+      throw new HttpError(403, 'Access denied.');
+    }
+  }
+
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || '')) {
+    throw new HttpError(400, 'Invalid payment month.');
+  }
+
+  const payments = await Payment.find({
+    group: g._id,
+    memberId: member._id,
+    month,
+  });
+
+  const totalPaid = paidFor(payments, member._id, month);
+  const progress = paymentProgress(g.contribution, totalPaid);
+
+  res.json({
+    groupId: String(g._id),
+    memberId: String(member._id),
+    memberName: member.name,
+    month,
+    contribution: progress.contribution,
+    totalPaid: progress.totalPaid,
+    remaining: progress.remaining,
+    paymentStatus: progress.paymentStatus,
+    installmentCount: payments.length,
+  });
+}));
+
+
 router.get('/history', wrap(async (req, res) => {
   const g = await ownGroup(req.user, req.query.groupId);
 

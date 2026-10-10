@@ -1,6 +1,24 @@
 import '../services/api_client.dart';
 
 class PaymentService {
+
+
+Future<Map<String, dynamic>> getBalance({
+  required String groupId,
+  required String memberId,
+  required String month,
+}) {
+  return api.get(
+    '/payments/balance',
+    query: {
+      'groupId': groupId,
+      'memberId': memberId,
+      'month': month,
+    },
+  );
+}
+
+
   // Get payment dashboard summary.
   Future<Map<String, dynamic>> getSummary(String groupId) {
     return api.get(
