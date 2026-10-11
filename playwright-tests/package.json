@@ -1,0 +1,14 @@
+{
+  "name": "seettu-playwright-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright API tests for the Seettu server (IT3060 Milestone 03, group WE_74)",
+  "scripts": {
+    "test": "playwright test",
+    "summary": "node scripts/summary.js",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
