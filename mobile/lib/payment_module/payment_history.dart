@@ -25,6 +25,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   bool loading = true;
   bool loadingHistory = false;
   bool canManage = false;
+  int _historyRequest = 0;
 
   @override
   void initState() {
@@ -68,6 +69,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   Future<void> loadHistory() async {
     final groupId = selectedGroupId;
     if (groupId == null) return;
+    final request = ++_historyRequest;
 
     setState(() {
       loadingHistory = true;
@@ -83,7 +85,11 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
       final history = results[0];
       final summary = results[1];
 
-      if (!mounted || selectedGroupId != groupId) return;
+      if (!mounted ||
+          selectedGroupId != groupId ||
+          request != _historyRequest) {
+        return;
+      }
 
       setState(() {
         payments = (history['payments'] as List? ?? [])
@@ -96,7 +102,11 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
         loadingHistory = false;
       });
     } catch (e) {
-      if (!mounted || selectedGroupId != groupId) return;
+      if (!mounted ||
+          selectedGroupId != groupId ||
+          request != _historyRequest) {
+        return;
+      }
       setState(() {
         error = errMsg(e);
         loadingHistory = false;
@@ -118,13 +128,15 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
         ? amount.toDouble()
         : double.tryParse(amount?.toString() ?? '') ?? 0;
 
-    final whole = value.toStringAsFixed(0);
-    final formatted = whole.replaceAllMapped(
+    final fixed = value.toStringAsFixed(2);
+    final parts = fixed.split('.');
+    final formattedWhole = parts[0].replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
       (match) => ',',
     );
 
-    return 'Rs. $formatted';
+    final decimals = parts[1] == '00' ? '' : '.${parts[1]}';
+    return 'Rs. $formattedWhole$decimals';
   }
 
   String monthLabel(dynamic value) {
@@ -558,28 +570,74 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
     );
   }
 
+  // Calculate progress after EACH installment, not just the final cycle status.
+  // The history endpoint returns one row per payment, newest first.
+  Map<String, dynamic> installmentInfo(Map<String, dynamic> payment) {
+    final memberId = payment['memberId']?.toString();
+    final month = payment['month']?.toString();
+    final matching = payments
+        .where((p) =>
+            p['memberId']?.toString() == memberId &&
+            p['month']?.toString() == month)
+        .toList();
+
+    // The API sorts newest first. Reverse that order for payments sharing a
+    // date, then sort by payment date so progress follows installment order.
+    matching.sort((a, b) {
+      final aDate = DateTime.tryParse(a['date']?.toString() ?? '');
+      final bDate = DateTime.tryParse(b['date']?.toString() ?? '');
+      final comparison =
+          (aDate ?? DateTime(1970)).compareTo(bDate ?? DateTime(1970));
+      if (comparison != 0) return comparison;
+      return payments.indexOf(b).compareTo(payments.indexOf(a));
+    });
+
+    final contribution = _asDouble(selectedGroup?['contribution']);
+    double paidSoFar = 0;
+    var installmentNumber = 0;
+    for (var i = 0; i < matching.length; i++) {
+      paidSoFar += _asDouble(matching[i]['amount']);
+      if (identical(matching[i], payment) ||
+          matching[i]['id']?.toString() == payment['id']?.toString()) {
+        installmentNumber = i + 1;
+        break;
+      }
+    }
+    paidSoFar = (paidSoFar * 100).round() / 100;
+    final remaining =
+        ((contribution - paidSoFar).clamp(0, double.infinity) * 100).round() /
+            100;
+    return {
+      'number': installmentNumber,
+      'paid': paidSoFar,
+      'remaining': remaining,
+      'fullyPaid': contribution > 0 && remaining == 0,
+    };
+  }
+
+  double _asDouble(dynamic value) =>
+      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
   Widget paymentCard(Map<String, dynamic> payment) {
+    final progress = installmentInfo(payment);
+    final fullyPaid = progress['fullyPaid'] == true;
+    final method = payment['method']?.toString() ?? 'Cash';
+    final reference = payment['reference']?.toString().trim() ?? '';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 11),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 15,
-        vertical: 16,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(
-          color: const Color(0xFFE4EAF1),
-        ),
+        border: Border.all(color: const Color(0xFFE4EAF1)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 5,
-            offset: Offset(0, 2),
-          ),
+              color: Color(0x08000000), blurRadius: 5, offset: Offset(0, 2)),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 35,
@@ -587,15 +645,9 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFFE9FFF3),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFFC4F5DC),
-              ),
+              border: Border.all(color: const Color(0xFFC4F5DC)),
             ),
-            child: const Icon(
-              Icons.check,
-              color: Color(0xFF00A56A),
-              size: 20,
-            ),
+            child: const Icon(Icons.payments_outlined, color: green, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -605,57 +657,59 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                 Text(
                   monthLabel(payment['month']),
                   style: const TextStyle(
-                    color: muted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+                      color: muted, fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 if (canManage) ...[
                   const SizedBox(height: 3),
-                  Text(
-                    payment['memberName']?.toString() ?? 'Unknown Member',
-                    style: const TextStyle(
-                      color: muted,
-                      fontSize: 12,
-                    ),
-                  ),
+                  Text(payment['memberName']?.toString() ?? 'Unknown Member',
+                      style: const TextStyle(color: muted, fontSize: 12)),
                 ],
-                const SizedBox(height: 4),
-                Text(
-                  money(payment['amount']),
-                  style: const TextStyle(
-                    color: dark,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
                 const SizedBox(height: 5),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 12,
-                      color: muted,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        'Paid on ${dateLabel(payment['date'])}',
-                        style: const TextStyle(
-                          color: muted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                Text(money(payment['amount']),
+                    style: const TextStyle(
+                        color: dark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 5),
+                Text('Installment ${progress['number']}  •  $method',
+                    style: const TextStyle(color: muted, fontSize: 12)),
+                const SizedBox(height: 4),
+                Text('Paid on ${dateLabel(payment['date'])}',
+                    style: const TextStyle(color: muted, fontSize: 12)),
+                const SizedBox(height: 7),
+                Text('Paid so far: ${money(progress['paid'])}',
+                    style: const TextStyle(color: dark, fontSize: 12)),
+                Text('Remaining: ${money(progress['remaining'])}',
+                    style: const TextStyle(
+                        color: dark,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+                if (reference.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('Reference: $reference',
+                      style: const TextStyle(color: muted, fontSize: 11),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                ],
               ],
             ),
           ),
-          const Icon(
-            Icons.check_circle,
-            color: green,
-            size: 21,
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color:
+                  fullyPaid ? const Color(0xFFE9FFF3) : const Color(0xFFFFF4DF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              fullyPaid ? 'Fully Paid' : 'Partial',
+              style: TextStyle(
+                color: fullyPaid ? green : const Color(0xFF9B6400),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
