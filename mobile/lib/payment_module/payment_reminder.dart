@@ -409,7 +409,7 @@ class _PaymentReminderScreenState extends State<PaymentReminderScreen> {
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
-            value: selectedReminder,
+            initialValue: selectedReminder,
             isExpanded: true,
             decoration: InputDecoration(
               filled: true,
