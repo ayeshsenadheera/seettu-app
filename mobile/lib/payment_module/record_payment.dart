@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-
 import '../services/api_client.dart';
 import 'payment_service.dart';
 
 class RecordPaymentScreen extends StatefulWidget {
   const RecordPaymentScreen({super.key});
-
   @override
   State<RecordPaymentScreen> createState() => _RecordPaymentScreenState();
 }
@@ -16,24 +14,25 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
   static const green = Color(0xFF087747);
   static const ink = Color(0xFF19263B);
   static const fieldColor = Color(0xFFE6EBF2);
-
   final formKey = GlobalKey<FormState>();
   final noteController = TextEditingController();
   final amountController = TextEditingController();
-
   List<Map<String, dynamic>> groups = [];
   List<Map<String, dynamic>> members = [];
-
   String? selectedGroupId;
   String? selectedMemberId;
-
   late String selectedMonth;
   late DateTime paymentDate;
-
   bool isLoading = true;
   bool isSaving = false;
+  bool isBalanceLoading = false;
+  String? balanceError;
+  double? contribution;
+  double? alreadyPaid;
+  double? remainingBalance;
+  String? paymentStatus;
+  int balanceRequestId = 0;
   String? loadError;
-
   @override
   void initState() {
     super.initState();
@@ -50,10 +49,8 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
   }
 
   String get formattedDate => DateFormat('dd MMM yyyy').format(paymentDate);
-
   String formatMonth(String month) =>
       DateFormat('MMMM yyyy').format(DateTime.parse('$month-01'));
-
   Map<String, dynamic>? get selectedGroup {
     for (final group in groups) {
       if (group['id'] == selectedGroupId) return group;
@@ -66,31 +63,28 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
       isLoading = true;
       loadError = null;
     });
-
     try {
       final response = await api.get('/groups');
-
       final loadedGroups = (response['groups'] as List)
           .map((item) => Map<String, dynamic>.from(item as Map))
           .toList();
-
       if (loadedGroups.isEmpty) {
         throw ApiException(
           'No Seettu groups found. Please create a group first.',
         );
       }
-
-      if (!mounted) return;
-
+      if (!mounted) {
+  return;
+}
       setState(() {
         groups = loadedGroups;
         selectedGroupId = loadedGroups.first['id'].toString();
       });
-
       await loadMembers(selectedGroupId!);
     } catch (e) {
-      if (!mounted) return;
-
+      if (!mounted) {
+  return;
+}
       setState(() {
         isLoading = false;
         loadError = errMsg(e);
@@ -103,32 +97,167 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
       isLoading = true;
       selectedMemberId = null;
       members = [];
+      balanceRequestId++;
+      isBalanceLoading = false;
+      balanceError = null;
+      contribution = null;
+      alreadyPaid = null;
+      remainingBalance = null;
+      paymentStatus = null;
       loadError = null;
     });
-
     try {
       final response = await api.get('/groups/$groupId/members');
-
       final loadedMembers = (response['members'] as List)
           .map((item) => Map<String, dynamic>.from(item as Map))
           .toList();
-
       if (!mounted || selectedGroupId != groupId) return;
-
       setState(() {
         members = loadedMembers;
-        amountController.text =
-            selectedGroup?['contribution']?.toString() ?? '';
+        amountController.clear();
         isLoading = false;
       });
     } catch (e) {
       if (!mounted || selectedGroupId != groupId) return;
-
       setState(() {
         isLoading = false;
         loadError = errMsg(e);
       });
     }
+  }
+
+  Future<void> loadBalance() async {
+    final groupId = selectedGroupId;
+    final memberId = selectedMemberId;
+    final month = selectedMonth;
+    final requestId = ++balanceRequestId;
+    if (groupId == null || memberId == null) {
+      setState(() {
+        isBalanceLoading = false;
+        balanceError = null;
+        contribution = null;
+        alreadyPaid = null;
+        remainingBalance = null;
+        paymentStatus = null;
+        amountController.clear();
+      });
+      return;
+    }
+    setState(() {
+      isBalanceLoading = true;
+      balanceError = null;
+      contribution = null;
+      alreadyPaid = null;
+      remainingBalance = null;
+      paymentStatus = null;
+      amountController.clear();
+    });
+    try {
+      final result = await paymentService.getBalance(
+        groupId: groupId,
+        memberId: memberId,
+        month: month,
+      );
+      if (!mounted ||
+          requestId != balanceRequestId ||
+          groupId != selectedGroupId ||
+          memberId != selectedMemberId ||
+          month != selectedMonth) return;
+      final remaining = (result['remaining'] as num).toDouble();
+      setState(() {
+        contribution = (result['contribution'] as num).toDouble();
+        alreadyPaid = (result['totalPaid'] as num).toDouble();
+        remainingBalance = remaining;
+        paymentStatus = result['paymentStatus']?.toString();
+        isBalanceLoading = false;
+        if (remaining > 0) amountController.text = remaining.toStringAsFixed(2);
+      });
+    } catch (e) {
+      if (!mounted || requestId != balanceRequestId) return;
+      setState(() {
+        isBalanceLoading = false;
+        balanceError = errMsg(e);
+      });
+    }
+  }
+
+  Widget paymentProgressCard() {
+    if (selectedMemberId == null) return const SizedBox.shrink();
+    if (isBalanceLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: CircularProgressIndicator(color: green)),
+      );
+    }
+    if (balanceError != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(balanceError!, style: const TextStyle(color: Colors.red)),
+            TextButton(
+                onPressed: loadBalance, child: const Text('Retry balance')),
+          ],
+        ),
+      );
+    }
+    if (remainingBalance == null) return const SizedBox.shrink();
+    final total = contribution ?? 0;
+    final paid = alreadyPaid ?? 0;
+    final remaining = remainingBalance!;
+    final fraction = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
+    Widget metric(String title, double value) => Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style:
+                      const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              const SizedBox(height: 5),
+              Text('Rs. ${value.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.bold, color: ink)),
+            ],
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F8F4),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: const Color(0xFFD5E9DC)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text('Payment Progress',
+                style: TextStyle(fontWeight: FontWeight.bold, color: ink)),
+            Text(paymentStatus ?? '',
+                style:
+                    const TextStyle(color: green, fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            metric('Contribution', total),
+            metric('Already Paid', paid),
+            metric('Remaining', remaining),
+          ]),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+              value: fraction,
+              color: green,
+              backgroundColor: const Color(0xFFDCE6E0),
+              minHeight: 7),
+          if (remaining <= 0) ...[
+            const SizedBox(height: 9),
+            const Text('This month is fully paid.',
+                style: TextStyle(color: green)),
+          ],
+        ],
+      ),
+    );
   }
 
   Future<void> chooseDate() async {
@@ -138,17 +267,19 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
     );
-
     if (selected != null && mounted) {
       setState(() => paymentDate = selected);
     }
   }
 
   Future<void> recordPayment() async {
-    if (isSaving || isLoading || loadError != null) return;
-
+    if (isSaving ||
+        isLoading ||
+        isBalanceLoading ||
+        loadError != null ||
+        balanceError != null ||
+        remainingBalance == null) return;
     if (!formKey.currentState!.validate()) return;
-
     if (selectedGroupId == null || selectedMemberId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -157,33 +288,39 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
       );
       return;
     }
-
+    final amount = double.parse(amountController.text.trim());
+    if (amount > remainingBalance! + 0.000001) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Amount exceeds the remaining balance.'),
+      ));
+      return;
+    }
     setState(() => isSaving = true);
-
     try {
-      await paymentService.recordPayment(
+      final result = await paymentService.recordPayment(
         groupId: selectedGroupId!,
         memberId: selectedMemberId!,
-        amount: double.parse(amountController.text.trim()),
+        amount: amount,
         month: selectedMonth,
         date: paymentDate,
         method: 'Cash',
         reference: noteController.text.trim(),
       );
-
-      if (!mounted) return;
-
+      if (!mounted) {
+  return;
+}
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           backgroundColor: green,
-          content: Text('Payment recorded successfully!'),
+          content: Text(
+              'Payment ${result['paymentStatus'] ?? 'recorded'}! Remaining: Rs. ${result['remaining']}'),
         ),
       );
-
       Navigator.of(context).pop(true);
     } catch (e) {
-      if (!mounted) return;
-
+      if (!mounted) {
+  return;
+}
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red,
@@ -240,7 +377,6 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
     final group = selectedGroup;
     final name = group?['name']?.toString() ?? 'Select Group';
     final contribution = group?['contribution']?.toString() ?? '0';
-
     return Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
@@ -297,14 +433,12 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
   @override
   Widget build(BuildContext context) {
     final currentYear = DateTime.now().year;
-
     final months = List.generate(
       12,
       (index) => DateFormat('yyyy-MM').format(
         DateTime(currentYear, index + 1),
       ),
     );
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -421,12 +555,15 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
                               }).toList(),
                               onChanged: (value) {
                                 setState(() => selectedMemberId = value);
+                                loadBalance();
                               },
                               validator: (value) =>
                                   value == null ? 'Select a member' : null,
                             ),
                             const SizedBox(height: 25),
-                            fieldLabel('Contribution Amount'),
+                            paymentProgressCard(),
+                            const SizedBox(height: 18),
+                            fieldLabel('Payment Amount (Full or Partial)'),
                             TextFormField(
                               controller: amountController,
                               keyboardType:
@@ -447,6 +584,10 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
                                 if (amount == null || amount <= 0) {
                                   return 'Enter a valid amount';
                                 }
+                                if (remainingBalance != null &&
+                                    amount > remainingBalance! + 0.000001) {
+                                  return 'Amount exceeds remaining balance';
+                                }
                                 return null;
                               },
                             ),
@@ -464,6 +605,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
                               onChanged: (value) {
                                 if (value != null) {
                                   setState(() => selectedMonth = value);
+                                  loadBalance();
                                 }
                               },
                             ),
@@ -509,7 +651,13 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
               width: double.infinity,
               height: 54,
               child: FilledButton(
-                onPressed: isLoading || isSaving || loadError != null
+                onPressed: isLoading ||
+                        isSaving ||
+                        isBalanceLoading ||
+                        loadError != null ||
+                        balanceError != null ||
+                        remainingBalance == null ||
+                        remainingBalance! <= 0
                     ? null
                     : recordPayment,
                 style: FilledButton.styleFrom(
