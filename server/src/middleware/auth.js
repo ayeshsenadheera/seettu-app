@@ -26,7 +26,7 @@ return wrap(async (req, res, next) => {
 
   let decoded;
   try { decoded = await verifyToken(token); }
-  catch (e) { throw new HttpError(401, 'Session expired. Please log in again.'); }
+  catch (e) { console.error('TOKEN ERROR:', e.message); throw new HttpError(401, 'Session expired. Please log in again.'); }
 
   const user = await User.findOne({ firebaseUid: decoded.uid });
   if (!user) throw new HttpError(404, 'ACCOUNT_NOT_SYNCED'); // client should call POST /auth/sync first
